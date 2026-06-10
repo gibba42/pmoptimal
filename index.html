@@ -29,11 +29,18 @@
       </nav>
 
       <div class="sidebar-foot">
+        <div class="data-tools" aria-label="Workspace data tools">
+          <span class="data-tools-label">Workspace data</span>
+          <button data-action="export-data"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg>Export JSON</button>
+          <button data-action="import-data"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 15V3m0 0 4 4m-4-4L8 7M5 19h14"/></svg>Import JSON</button>
+          <button data-action="reset-demo"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/></svg>Reset demo data</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+        </div>
         <div class="storage-note">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.2c0 4.6 3.2 8.9 7.5 9.8 4.3-.9 7.5-5.2 7.5-9.8V6L12 3Z"/><path d="m8.8 12 2.1 2.1 4.5-4.6"/></svg>
           <div><strong>Local workspace</strong><span>Saved in this browser</span></div>
         </div>
-        <p>PMOptimal <span>v1.0</span></p>
+        <p>PMOptimal <span>v1.1</span></p>
       </div>
     </aside>
 
