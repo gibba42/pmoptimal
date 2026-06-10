@@ -94,12 +94,37 @@
           <label class="field">Status<select id="task-status" name="status"><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option></select></label>
           <label class="field">Priority<select id="task-priority" name="priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label>
           <label class="field">Owner<input id="task-owner" name="owner" maxlength="60" placeholder="Task owner"></label>
-          <label class="field">Due date<input id="task-due-date" name="dueDate" type="date"></label>
+          <label class="field">Start date<input id="task-start-date" name="startDate" type="date"></label>
+          <label class="field">End date<input id="task-end-date" name="endDate" type="date"><small class="field-error"></small></label>
         </div>
       </div>
       <div class="dialog-actions">
         <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
         <button class="primary-button" id="task-submit" type="submit">Add task</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="action-dialog" class="form-dialog">
+    <form method="dialog" id="action-form" novalidate>
+      <div class="dialog-header">
+        <div><span class="eyebrow">Task follow-up</span><h2 id="action-dialog-title">Add an action item</h2></div>
+        <button class="icon-button" type="button" data-close-dialog aria-label="Close dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="dialog-body">
+        <input type="hidden" id="action-id">
+        <input type="hidden" id="action-task-id">
+        <label class="field field-wide">Action item <span>*</span><input id="action-title" name="title" maxlength="120" required placeholder="e.g. Confirm approval with legal"><small class="field-error"></small></label>
+        <div class="field-grid">
+          <label class="field">Owner<input id="action-owner" name="owner" maxlength="60" placeholder="Action owner"></label>
+          <label class="field">Due date<input id="action-due-date" name="dueDate" type="date"></label>
+          <label class="field">Status<select id="action-status" name="status"><option value="open">Open</option><option value="in-progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option></select></label>
+        </div>
+        <label class="field field-wide">Notes<textarea id="action-notes" name="notes" rows="4" maxlength="1000" placeholder="Add context, decisions, or next steps"></textarea></label>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+        <button class="primary-button" id="action-submit" type="submit">Add action item</button>
       </div>
     </form>
   </dialog>
