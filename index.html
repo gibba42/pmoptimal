@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PMOptimal is a lightweight, local-first project and task management workspace.">
+  <title>PMOptimal — Project workspace</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="#dashboard" aria-label="PMOptimal home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>PMOptimal</span>
+      </a>
+
+      <nav class="main-nav">
+        <a href="#dashboard" data-route="dashboard" class="nav-link active">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>
+          Dashboard
+        </a>
+        <a href="#projects" data-route="projects" class="nav-link">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h4l2 2H18.5A1.5 1.5 0 0 1 20 7.5v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-12Z"/></svg>
+          Projects
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="storage-note">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.2c0 4.6 3.2 8.9 7.5 9.8 4.3-.9 7.5-5.2 7.5-9.8V6L12 3Z"/><path d="m8.8 12 2.1 2.1 4.5-4.6"/></svg>
+          <div><strong>Local workspace</strong><span>Saved in this browser</span></div>
+        </div>
+        <p>PMOptimal <span>v1.0</span></p>
+      </div>
+    </aside>
+
+    <main class="main-content" id="main-content" tabindex="-1">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobile-menu" aria-label="Open navigation" aria-expanded="false">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <div class="topbar-context">
+          <span>Portfolio workspace</span>
+          <span class="save-status" id="save-status"><i></i> All changes saved</span>
+        </div>
+        <button class="primary-button topbar-add" data-action="new-project">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          New project
+        </button>
+      </header>
+
+      <div id="app" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <dialog id="project-dialog" class="form-dialog">
+    <form method="dialog" id="project-form" novalidate>
+      <div class="dialog-header">
+        <div><span class="eyebrow">Project setup</span><h2 id="project-dialog-title">Create a project</h2></div>
+        <button class="icon-button" type="button" data-close-dialog aria-label="Close dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="dialog-body">
+        <input type="hidden" id="project-id">
+        <label class="field field-wide">Project name <span>*</span><input id="project-name" name="name" maxlength="80" required placeholder="e.g. Customer portal launch"><small class="field-error"></small></label>
+        <div class="field-grid">
+          <label class="field">Status<select id="project-status" name="status"><option value="active">Active</option><option value="planning">Planning</option><option value="on-hold">On hold</option><option value="completed">Completed</option></select></label>
+          <label class="field">Priority<select id="project-priority" name="priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label>
+          <label class="field">Owner<input id="project-owner" name="owner" maxlength="60" placeholder="Project owner"></label>
+          <label class="field">Target date<input id="project-target-date" name="targetDate" type="date"></label>
+        </div>
+        <label class="field field-wide">Description<textarea id="project-description" name="description" rows="4" maxlength="500" placeholder="What is this project aiming to deliver?"></textarea></label>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+        <button class="primary-button" id="project-submit" type="submit">Create project</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="task-dialog" class="form-dialog compact-dialog">
+    <form method="dialog" id="task-form" novalidate>
+      <div class="dialog-header">
+        <div><span class="eyebrow">Plan item</span><h2 id="task-dialog-title">Add a task</h2></div>
+        <button class="icon-button" type="button" data-close-dialog aria-label="Close dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="dialog-body">
+        <input type="hidden" id="task-id">
+        <input type="hidden" id="task-project-id">
+        <label class="field field-wide">Task name <span>*</span><input id="task-title" name="title" maxlength="100" required placeholder="e.g. Review launch checklist"><small class="field-error"></small></label>
+        <div class="field-grid">
+          <label class="field">Status<select id="task-status" name="status"><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option></select></label>
+          <label class="field">Priority<select id="task-priority" name="priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label>
+          <label class="field">Owner<input id="task-owner" name="owner" maxlength="60" placeholder="Task owner"></label>
+          <label class="field">Due date<input id="task-due-date" name="dueDate" type="date"></label>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+        <button class="primary-button" id="task-submit" type="submit">Add task</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="confirm-dialog">
+    <form method="dialog">
+      <div class="danger-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 4.7 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.7 4.7a2 2 0 0 0-3.4 0Z"/></svg></div>
+      <h2 id="confirm-title">Delete this item?</h2>
+      <p id="confirm-message">This action cannot be undone.</p>
+      <div class="dialog-actions">
+        <button class="secondary-button" value="cancel">Cancel</button>
+        <button class="danger-button" value="confirm">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
