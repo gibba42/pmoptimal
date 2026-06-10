@@ -16,6 +16,8 @@ const DEFAULT_STATE = {
 let state = loadState();
 let confirmCallback = null;
 let toastTimer = null;
+let projectFilters = { status: 'all', priority: 'all' };
+let taskFilters = { status: 'all', priority: 'all' };
 
 const app = document.querySelector('#app');
 const projectDialog = document.querySelector('#project-dialog');
@@ -26,6 +28,59 @@ const actionDialog = document.querySelector('#action-dialog');
 const actionForm = document.querySelector('#action-form');
 const confirmDialog = document.querySelector('#confirm-dialog');
 const toast = document.querySelector('#toast');
+const importFile = document.querySelector('#import-file');
+
+
+function isoDateFromToday(days) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function createDemoState() {
+  const now = new Date().toISOString();
+  return {
+    ...structuredClone(DEFAULT_STATE),
+    projects: [
+      { id: 'project-website', name: 'Customer portal launch', status: 'active', priority: 'high', owner: 'Maya Chen', targetDate: isoDateFromToday(32), description: 'Launch a faster, self-service customer experience with clear ownership across product, design, and operations.', createdAt: now, updatedAt: now },
+      { id: 'project-ops', name: 'Operations playbook', status: 'planning', priority: 'medium', owner: 'Jordan Lee', targetDate: isoDateFromToday(58), description: 'Standardize core operating rhythms, controls, and handoffs for the next stage of growth.', createdAt: now, updatedAt: now },
+      { id: 'project-insights', name: 'Executive KPI refresh', status: 'on-hold', priority: 'low', owner: 'Avery Brooks', targetDate: isoDateFromToday(76), description: 'Align leadership reporting around a concise set of measurable portfolio outcomes.', createdAt: now, updatedAt: now }
+    ],
+    tasks: [
+      { id: 'task-research', projectId: 'project-website', title: 'Validate launch requirements', status: 'completed', priority: 'high', owner: 'Maya Chen', startDate: isoDateFromToday(-18), endDate: isoDateFromToday(-9), createdAt: now, updatedAt: now },
+      { id: 'task-design', projectId: 'project-website', title: 'Approve production experience', status: 'in-progress', priority: 'high', owner: 'Noah Williams', startDate: isoDateFromToday(-5), endDate: isoDateFromToday(8), createdAt: now, updatedAt: now },
+      { id: 'task-readiness', projectId: 'project-website', title: 'Complete launch readiness review', status: 'blocked', priority: 'medium', owner: 'Priya Shah', startDate: isoDateFromToday(5), endDate: isoDateFromToday(19), createdAt: now, updatedAt: now },
+      { id: 'task-process', projectId: 'project-ops', title: 'Map critical operating processes', status: 'not-started', priority: 'medium', owner: 'Jordan Lee', startDate: isoDateFromToday(9), endDate: isoDateFromToday(28), createdAt: now, updatedAt: now },
+      { id: 'task-kpi', projectId: 'project-insights', title: 'Confirm KPI definitions', status: 'not-started', priority: 'low', owner: 'Avery Brooks', startDate: '', endDate: isoDateFromToday(-3), createdAt: now, updatedAt: now }
+    ],
+    actionItems: [
+      { id: 'action-legal', taskId: 'task-design', title: 'Confirm final privacy language', owner: 'Elena Park', dueDate: isoDateFromToday(3), status: 'in-progress', notes: 'Legal is reviewing the updated account consent flow.', createdAt: now, updatedAt: now },
+      { id: 'action-accessibility', taskId: 'task-design', title: 'Close accessibility findings', owner: 'Noah Williams', dueDate: isoDateFromToday(-2), status: 'open', notes: 'Resolve the remaining keyboard navigation issues before approval.', createdAt: now, updatedAt: now }
+    ],
+    selectedProjectId: 'project-website',
+    selectedTaskId: 'task-design',
+    savedAt: now
+  };
+}
+
+function normalizeImportedState(candidate) {
+  if (!candidate || typeof candidate !== 'object' || !Array.isArray(candidate.projects) || !Array.isArray(candidate.tasks)) throw new Error('Missing projects or tasks');
+  const projectIds = new Set(candidate.projects.map(project => project.id).filter(Boolean));
+  if (projectIds.size !== candidate.projects.length) throw new Error('Projects must have unique IDs');
+  const taskIds = new Set(candidate.tasks.map(task => task.id).filter(Boolean));
+  if (taskIds.size !== candidate.tasks.length || candidate.tasks.some(task => !projectIds.has(task.projectId))) throw new Error('Tasks contain invalid project links');
+  const actionItems = Array.isArray(candidate.actionItems) ? candidate.actionItems : [];
+  if (actionItems.some(action => !taskIds.has(action.taskId))) throw new Error('Action items contain invalid task links');
+  return {
+    ...structuredClone(DEFAULT_STATE),
+    ...candidate,
+    version: STATE_VERSION,
+    projects: candidate.projects.map(project => ({ ...project, priority: project.priority || 'medium' })),
+    tasks: candidate.tasks.map(task => ({ ...task, startDate: task.startDate || '', endDate: task.endDate || task.dueDate || '', priority: task.priority || 'medium' })),
+    actionItems
+  };
+}
 
 function loadState() {
   try {
@@ -254,12 +309,24 @@ function projectRow(project) {
 }
 
 function renderProjects() {
+  const filteredProjects = state.projects.filter(project =>
+    (projectFilters.status === 'all' || project.status === projectFilters.status) &&
+    (projectFilters.priority === 'all' || project.priority === projectFilters.priority)
+  );
+  const filtersActive = projectFilters.status !== 'all' || projectFilters.priority !== 'all';
   app.innerHTML = `
     <div class="page-wrap">
       <div class="page-header"><div><span class="eyebrow">Portfolio</span><h1>Projects</h1><p class="page-subtitle">Keep every initiative organized, visible, and moving forward.</p></div><button class="primary-button" data-action="new-project"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New project</button></div>
-      <div class="projects-toolbar"><span class="project-count"><strong>${state.projects.length}</strong> project${state.projects.length === 1 ? '' : 's'} in your workspace</span></div>
-      ${state.projects.length ? `<div class="project-grid">${state.projects.map(projectCard).join('')}</div>` : `<section class="section-card">${emptyState('folder', 'Create your first project', 'Bring your plans into one clear workspace. Add a project, then break the work into manageable tasks.', 'Create project', 'new-project')}</section>`}
+      <div class="filter-bar" aria-label="Project filters">
+        <div class="filter-summary"><strong>${filteredProjects.length}</strong><span>of ${state.projects.length} projects</span></div>
+        <label>Status<select data-filter="project-status"><option value="all">All statuses</option><option value="active">Active</option><option value="planning">Planning</option><option value="on-hold">On hold</option><option value="completed">Completed</option></select></label>
+        <label>Priority<select data-filter="project-priority"><option value="all">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+        ${filtersActive ? '<button class="clear-filters" data-action="clear-project-filters">Clear filters</button>' : ''}
+      </div>
+      ${state.projects.length ? (filteredProjects.length ? `<div class="project-grid">${filteredProjects.map(projectCard).join('')}</div>` : `<section class="section-card">${emptyState('filter', 'No projects match these filters', 'Try a different status or priority to widen your portfolio view.', 'Clear filters', 'clear-project-filters')}</section>`) : `<section class="section-card">${emptyState('folder', 'Create your first project', 'Bring your plans into one clear workspace. Add a project, then break the work into manageable tasks.', 'Create project', 'new-project')}</section>`}
     </div>`;
+  document.querySelector('[data-filter="project-status"]').value = projectFilters.status;
+  document.querySelector('[data-filter="project-priority"]').value = projectFilters.priority;
 }
 
 function projectCard(project) {
@@ -269,7 +336,7 @@ function projectCard(project) {
   return `<article class="project-card">
     <div class="project-card-top"><span class="project-initial" style="--initial-color:${color};--initial-bg:${background}">${escapeHtml(projectInitial(project))}</span><div class="card-menu"><button class="icon-button" data-action="toggle-menu" aria-label="Project actions" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 7h.01M12 12h.01M12 17h.01"/></svg></button><div class="menu-popover"><button data-action="edit-project" data-id="${project.id}"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></svg>Edit</button><button class="delete" data-action="delete-project" data-id="${project.id}"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg>Delete</button></div></div></div>
     <h2><a href="#projects/${encodeURIComponent(project.id)}">${escapeHtml(project.name)}</a></h2><p>${escapeHtml(project.description || 'No description added yet.')}</p>
-    <div class="card-meta"><span class="status-badge status-${project.status}">${labelFor(project.status)}</span><span class="card-date">${project.targetDate ? `Target ${formatDate(project.targetDate)}` : 'No target date'}</span></div>
+    <div class="card-meta"><div class="badge-group"><span class="status-badge status-${project.status}">${labelFor(project.status)}</span><span class="priority-badge priority-${project.priority}">${labelFor(project.priority)}</span></div><span class="card-date">${project.targetDate ? `Target ${formatDate(project.targetDate)}` : 'No target date'}</span></div>
     <div class="card-progress"><div class="progress-meta"><span>${tasks.length} task${tasks.length === 1 ? '' : 's'}</span><strong>${progress}% complete</strong></div><div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div></div>
   </article>`;
 }
@@ -278,7 +345,12 @@ function renderProjectDetail(project) {
   const [color, background] = colorForId(project.id);
   const tasks = tasksForProject(project.id);
   const progress = projectProgress(project.id);
-  const selectedTask = tasks.find(task => task.id === state.selectedTaskId) || tasks[0] || null;
+  const filteredTasks = tasks.filter(task =>
+    (taskFilters.status === 'all' || task.status === taskFilters.status) &&
+    (taskFilters.priority === 'all' || task.priority === taskFilters.priority)
+  );
+  const taskFiltersActive = taskFilters.status !== 'all' || taskFilters.priority !== 'all';
+  const selectedTask = filteredTasks.find(task => task.id === state.selectedTaskId) || filteredTasks[0] || null;
   state.selectedTaskId = selectedTask?.id || null;
   const actionItems = selectedTask ? actionsForTask(selectedTask.id) : [];
   const openActions = actionItems.filter(action => action.status !== 'completed').length;
@@ -293,7 +365,13 @@ function renderProjectDetail(project) {
         <div class="project-workspace">
           <section class="section-card">
             <div class="section-head"><div><h2>Project plan</h2><p>${tasks.length} task${tasks.length === 1 ? '' : 's'} · ${tasks.filter(task => task.status === 'completed').length} completed</p></div><button class="text-button" data-action="new-task" data-project-id="${project.id}">Add task <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
-            ${tasks.length ? taskTable(tasks, selectedTask?.id) : emptyState('task', 'No tasks in this project', 'Add the first task to turn this project into an actionable plan.', 'Add first task', 'new-task', project.id)}
+            <div class="filter-bar compact-filter" aria-label="Task filters">
+              <div class="filter-summary"><strong>${filteredTasks.length}</strong><span>of ${tasks.length} tasks</span></div>
+              <label>Status<select data-filter="task-status"><option value="all">All statuses</option><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option></select></label>
+              <label>Priority<select data-filter="task-priority"><option value="all">All priorities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+              ${taskFiltersActive ? '<button class="clear-filters" data-action="clear-task-filters">Clear</button>' : ''}
+            </div>
+            ${tasks.length ? (filteredTasks.length ? taskTable(filteredTasks, selectedTask?.id) : emptyState('filter', 'No tasks match these filters', 'Clear a filter or choose another status and priority.', 'Clear filters', 'clear-task-filters')) : emptyState('task', 'No tasks in this project', 'Add the first task to turn this project into an actionable plan.', 'Add first task', 'new-task', project.id)}
           </section>
           ${selectedTask ? `<section class="section-card action-section">
             <div class="section-head"><div><span class="eyebrow">Selected task</span><h2>${escapeHtml(selectedTask.title)}</h2><p>${actionItems.length} action item${actionItems.length === 1 ? '' : 's'} · ${openActions} open</p></div><button class="primary-button small-button" data-action="new-action" data-task-id="${selectedTask.id}"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add action</button></div>
@@ -307,6 +385,8 @@ function renderProjectDetail(project) {
         </aside>
       </div>
     </div>`;
+  document.querySelector('[data-filter="task-status"]').value = taskFilters.status;
+  document.querySelector('[data-filter="task-priority"]').value = taskFilters.priority;
 }
 
 function taskTable(tasks, selectedTaskId) {
@@ -517,10 +597,12 @@ actionForm.addEventListener('keydown', event => {
   }
 });
 
-function requestConfirmation(title, message, callback) {
+function requestConfirmation(title, message, callback, confirmLabel = 'Delete') {
   document.querySelector('#confirm-title').textContent = title;
   document.querySelector('#confirm-message').textContent = message;
   confirmCallback = callback;
+  confirmDialog.returnValue = 'cancel';
+  confirmDialog.querySelector('.danger-button').textContent = confirmLabel;
   confirmDialog.showModal();
 }
 
@@ -564,6 +646,50 @@ function deleteAction(actionId) {
     saveState('Action item deleted');
     render();
   });
+}
+
+
+function resetDemoData() {
+  requestConfirmation('Reset to demo data?', 'This replaces every current project, task, and action item with a fresh PMO demo workspace.', () => {
+    state = createDemoState();
+    projectFilters = { status: 'all', priority: 'all' };
+    taskFilters = { status: 'all', priority: 'all' };
+    saveState('Demo workspace restored');
+    location.hash = '#dashboard';
+    render();
+  }, 'Reset data');
+}
+
+function exportData() {
+  const payload = JSON.stringify({ ...state, version: STATE_VERSION, exportedAt: new Date().toISOString() }, null, 2);
+  const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `pmoptimal-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast('Workspace exported');
+}
+
+async function importData(file) {
+  try {
+    const imported = normalizeImportedState(JSON.parse(await file.text()));
+    requestConfirmation('Import this workspace?', `This will replace your current workspace with ${imported.projects.length} projects and ${imported.tasks.length} tasks.`, () => {
+      state = imported;
+      projectFilters = { status: 'all', priority: 'all' };
+      taskFilters = { status: 'all', priority: 'all' };
+      saveState('Workspace imported');
+      location.hash = '#dashboard';
+      render();
+    }, 'Import workspace');
+  } catch (error) {
+    console.error(error);
+    showToast('Import failed: choose a valid PMOptimal JSON file');
+  } finally {
+    importFile.value = '';
+  }
 }
 
 function showToast(message) {
@@ -621,6 +747,17 @@ document.addEventListener('click', event => {
     event.stopPropagation();
     deleteAction(id);
   }
+  if (action === 'clear-project-filters') {
+    projectFilters = { status: 'all', priority: 'all' };
+    render();
+  }
+  if (action === 'clear-task-filters') {
+    taskFilters = { status: 'all', priority: 'all' };
+    render();
+  }
+  if (action === 'export-data') exportData();
+  if (action === 'import-data') importFile.click();
+  if (action === 'reset-demo') resetDemoData();
   if (action === 'toggle-menu') {
     event.preventDefault();
     event.stopPropagation();
@@ -630,6 +767,20 @@ document.addEventListener('click', event => {
     menu.classList.toggle('open', !wasOpen);
     actionTarget.setAttribute('aria-expanded', String(!wasOpen));
   }
+});
+
+
+document.addEventListener('change', event => {
+  const filter = event.target.dataset.filter;
+  if (filter === 'project-status') projectFilters.status = event.target.value;
+  if (filter === 'project-priority') projectFilters.priority = event.target.value;
+  if (filter === 'task-status') taskFilters.status = event.target.value;
+  if (filter === 'task-priority') taskFilters.priority = event.target.value;
+  if (filter) render();
+});
+
+importFile.addEventListener('change', () => {
+  if (importFile.files[0]) importData(importFile.files[0]);
 });
 
 document.addEventListener('keydown', event => {
